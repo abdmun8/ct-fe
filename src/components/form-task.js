@@ -2,7 +2,8 @@
 
 import axiosInstance from "@/helper/axios";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const defaultState = {
   title: "",
@@ -11,6 +12,8 @@ const defaultState = {
 };
 
 export default function FormTask() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
   const [formData, setFormData] = useState(defaultState);
   const [actionMessage, setActionMessage] = useState("");
   const [disableButton, setDisableButton] = useState(false);
@@ -28,12 +31,37 @@ export default function FormTask() {
     }));
   };
 
+  const updateTask = (id) => {
+    setActionMessage("updating...");
+    axiosInstance
+      .put("/tasks/" + id, formData)
+      .then((res) => {
+        setActionMessage("Update success");
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      })
+      .catch((err) => {
+        setActionMessage("Something went wrong!");
+        setTimeout(() => {
+          setActionMessage("");
+        }, 5000);
+        console.log({ err });
+        alert("Something went wrong!");
+      });
+  };
+
   const saveData = () => {
     if (!formData.title) {
       setFormError({ title: true });
       return;
     }
+
     setDisableButton(true);
+
+    if (id) {
+      return updateTask(id);
+    }
 
     setActionMessage("Creating...");
     axiosInstance
@@ -56,6 +84,37 @@ export default function FormTask() {
         alert("Something went wrong!");
       });
   };
+
+  const getTask = (id) => {
+    setActionMessage("Loading...");
+    axiosInstance
+      .get("/tasks/" + id)
+      .then((res) => {
+        setActionMessage("");
+        if (res.data) {
+          const { title, description, completed } = res.data.data;
+          setFormData({
+            title,
+            description,
+            completed,
+          });
+        }
+      })
+      .catch((err) => {
+        setActionMessage("Something went wrong!");
+        setTimeout(() => {
+          setActionMessage("");
+        }, 5000);
+        console.log({ err });
+        alert("Something went wrong!");
+      });
+  };
+
+  useEffect(() => {
+    if (id) {
+      getTask(id);
+    }
+  }, [id]);
 
   return (
     <div className="">
@@ -100,7 +159,7 @@ export default function FormTask() {
             className="bg-blue-500 px-2 py-0.5 text-white rounded disabled:bg-blue-100"
             onClick={saveData}
           >
-            Add
+            {id ? "Update" : "Add"}
           </button>
         </div>
       </form>
